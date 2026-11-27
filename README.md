@@ -1,6 +1,40 @@
 # DEADLIGHT // OUTPOST 13
 
-**Play online:** https://SHBT2025.github.io/2611sangshideepseek/
+**在线试玩 · Play online:** https://SHBT2025.github.io/2611sangshideepseek/
+
+## 中文介绍
+
+**《DEADLIGHT // 前哨 13》** 是一个完全运行在浏览器中的 3D 僵尸生存第一人称射击游戏。整个游戏——地形、建筑、材质、贴图、植被、天空、雨雾、武器模型、僵尸模型与动画、音效与氛围音乐——全部由代码在运行时程序化生成，不使用任何外部素材，也不会发起网络请求。
+
+- **守住前哨**：保护中央的无线电灯塔/发电机，利用南北两座可破坏、可修复的木门抵挡尸潮。
+- **8 波进攻**：普通行尸、快速奔跑者、重型壮尸、尖啸者和第 8 波 Boss「ABOMINATION」。
+- **生存搜刮**：波次之间搜刮弹药、医疗包、木板和补给箱，修复门板、加固防线。
+- **昼夜双版本**：开始菜单可选择 **夜晚**（暴雨、星空、闪电、低能见度）或 **白天**（阴天暖阳、更远视距、细雨与湿地反光）。
+- **完整流程**：开始菜单、战场手册、设置、暂停、死亡统计、撤离胜利结算和重新开始。
+- **技术规格**：Three.js r160 + WebGL 2，单文件 `index.html`（约 1.2 MB），HDR 后处理、动态阴影、程序化音频，桌面 Chrome / Edge 即可运行。
+
+### 操作
+
+| 按键 | 功能 |
+|---|---|
+| `W A S D` | 移动 |
+| 鼠标 | 视角 |
+| `Shift` | 冲刺 |
+| `C` | 蹲下 |
+| 鼠标左键 | 射击 |
+| 鼠标右键 | 瞄准 |
+| `R` | 换弹 |
+| `F` | 手电筒 |
+| `E` | 拾取 / 交互 / 按住修复门板 |
+| `H` | 使用医疗包 |
+| `1` `2` `Q` | 切换武器 |
+| `Esc` | 暂停 |
+
+> 需要支持 WebGL 2 的桌面浏览器与鼠标键盘；音频会在首次点击后解锁。项目仓库：[2611sangshideepseek](https://github.com/SHBT2025/2611sangshideepseek)。
+
+---
+
+## English
 
 A complete single-file 3D zombie survival FPS for the browser. Everything — geometry, materials, textures, lighting, weather, weapon viewmodels, zombie bodies, animation, sound effects and music — is generated procedurally at runtime. No external assets, no network requests.
 
