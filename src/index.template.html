@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23060b0d'/%3E%3Cpath d='M32 7 L57 32 L32 57 L7 32 Z' fill='none' stroke='%23ffb24a' stroke-width='3'/%3E%3Crect x='27' y='27' width='10' height='10' fill='%23ffb24a'/%3E%3C/svg%3E" />
+<title>DEADLIGHT // OUTPOST 13</title>
+<style>
+  :root{
+    --bone:#d9d4c6; --bone-dim:#8d8b80; --ink:#070b0d; --panel:rgba(8,13,15,.78);
+    --amber:#ffb24a; --amber-hot:#ffd18a; --teal:#69d3ca; --blood:#b33525;
+    --line:rgba(217,212,198,.16); --line-hot:rgba(255,178,74,.5);
+    --sans:"Bahnschrift SemiCondensed","DIN Alternate","Arial Narrow","Segoe UI",sans-serif;
+    --mono:"Consolas","Roboto Mono","Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#030506;color:var(--bone);font-family:var(--sans);-webkit-font-smoothing:antialiased;user-select:none}
+  canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;background:#030506;outline:none}
+  .hidden{display:none!important}
+  .mono{font-family:var(--mono)}
+  button{font-family:inherit;color:inherit;cursor:pointer}
+  .screen{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,rgba(4,8,10,.18) 0%,rgba(3,5,6,.74) 62%,rgba(3,5,6,.96) 100%)}
+  .screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.017) 0 1px,transparent 1px 4px);opacity:.5;mix-blend-mode:overlay}
+  .grain{position:fixed;inset:-20%;z-index:5;pointer-events:none;opacity:.11;background-image:
+    radial-gradient(circle at 18% 27%,rgba(255,255,255,.08) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 72% 63%,rgba(255,255,255,.065) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 41% 82%,rgba(0,0,0,.2) 0 1px,transparent 1.5px);
+    background-size:7px 7px,11px 11px,9px 9px;animation:grainMove .45s steps(2) infinite}
+  @keyframes grainMove{0%{transform:translate(0,0)}25%{transform:translate(-1%,1%)}50%{transform:translate(1%,-1%)}75%{transform:translate(-1%,-1%)}100%{transform:translate(1%,1%)}}
+  .vignette{position:fixed;inset:0;z-index:6;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.28) 72%,rgba(0,0,0,.72) 100%)}
+  .damage-wash{position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(90,5,3,.35) 76%,rgba(120,8,4,.66) 100%);transition:opacity .12s linear}
+  .flash-wash{position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;background:rgba(175,205,235,.35);mix-blend-mode:screen}
+
+  /* ---------------- loading ---------------- */
+  #loading{flex-direction:column;background:radial-gradient(ellipse at 50% 40%,#0b1418 0%,#040708 65%,#010202 100%)}
+  .load-inner{width:min(620px,84vw);text-align:center;position:relative;z-index:2;padding:20px}
+  .load-mark{width:52px;height:52px;margin:0 auto 26px;border:1px solid var(--line-hot);position:relative;transform:rotate(45deg);box-shadow:0 0 40px rgba(255,178,74,.2) inset}
+  .load-mark::before{content:"";position:absolute;inset:9px;border:1px solid rgba(105,211,202,.5)}
+  .load-mark::after{content:"";position:absolute;inset:20px;background:var(--amber);box-shadow:0 0 18px var(--amber)}
+  #loading h1{font-family:var(--sans);font-weight:800;font-size:clamp(40px,6vw,74px);letter-spacing:.28em;margin:0 0 6px;color:var(--bone);text-shadow:0 0 30px rgba(217,212,198,.12)}
+  .load-sub{font-family:var(--mono);font-size:11px;letter-spacing:.42em;color:var(--amber);margin-bottom:44px;text-transform:uppercase}
+  .load-track{height:2px;background:rgba(217,212,198,.1);position:relative;overflow:hidden}
+  #load-fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:linear-gradient(90deg,var(--teal),var(--amber));box-shadow:0 0 15px var(--amber);transition:width .25s ease}
+  .load-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--bone-dim);margin-top:12px;text-transform:uppercase}
+  #load-pct{color:var(--amber)}
+  #load-tip{position:fixed;bottom:38px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:rgba(217,212,198,.38);text-align:center;max-width:80vw}
+
+  /* ---------------- start menu ---------------- */
+  #menu{background:linear-gradient(90deg,rgba(2,4,5,.94) 0%,rgba(2,4,5,.62) 42%,rgba(2,4,5,.18) 70%,rgba(2,4,5,.58) 100%)}
+  #menu::before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(2,4,5,.92) 0%,transparent 26%,transparent 72%,rgba(2,4,5,.72) 100%)}
+  .menu-frame{position:absolute;inset:26px;border:1px solid rgba(217,212,198,.12);pointer-events:none;z-index:1}
+  .menu-frame::before,.menu-frame::after{content:"";position:absolute;width:64px;height:64px;border:1px solid rgba(255,178,74,.45)}
+  .menu-frame::before{left:-1px;top:-1px;border-right:none;border-bottom:none}
+  .menu-frame::after{right:-1px;bottom:-1px;border-left:none;border-top:none}
+  .menu-top{position:absolute;top:46px;left:54px;right:54px;display:flex;justify-content:space-between;align-items:center;z-index:3;font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase}
+  .menu-top .live{display:flex;gap:9px;align-items:center;color:#d9a08c}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--blood);box-shadow:0 0 10px var(--blood);animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  .menu-main{position:absolute;left:8.5vw;top:50%;transform:translateY(-52%);z-index:3;width:min(670px,56vw)}
+  .menu-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.55em;color:var(--teal);margin-bottom:18px;display:flex;align-items:center;gap:14px}
+  .menu-kicker::before{content:"";width:40px;height:1px;background:var(--teal);opacity:.6}
+  .game-title{font-family:var(--sans);font-weight:900;font-size:clamp(72px,10.6vw,172px);line-height:.78;margin:0 0 0 -6px;letter-spacing:-.055em;position:relative;color:var(--bone);text-transform:uppercase;text-shadow:0 0 70px rgba(160,200,210,.12)}
+  .game-title .thin{display:block;font-weight:300;font-size:.37em;letter-spacing:.55em;color:var(--amber);margin-top:22px;text-shadow:0 0 30px rgba(255,178,74,.35)}
+  .game-title::after{content:"DEADLIGHT";position:absolute;left:2px;top:1px;color:rgba(105,211,202,.13);clip-path:inset(48% 0 38% 0);pointer-events:none}
+  .title-rule{height:1px;width:100%;margin:28px 0 20px;background:linear-gradient(90deg,var(--line-hot),rgba(217,212,198,.15) 42%,transparent)}
+  .menu-tagline{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--bone-dim);text-transform:uppercase;margin:0 0 16px;line-height:1.8}
+  .tod-picker{width:min(360px,100%);margin:0 0 18px}
+  .tod-label{font-family:var(--mono);font-size:8px;letter-spacing:.34em;color:rgba(105,211,202,.7);text-transform:uppercase;margin-bottom:7px}
+  .tod-options{display:flex;gap:8px}
+  .tod-card{flex:1;display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid rgba(217,212,198,.18);background:linear-gradient(135deg,rgba(217,212,198,.035),rgba(217,212,198,.005));color:var(--bone-dim);text-align:left;transition:.18s ease;clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
+  .tod-card:hover{border-color:rgba(255,178,74,.55);background:rgba(255,178,74,.07)}
+  .tod-card.on{border-color:var(--amber);background:linear-gradient(135deg,rgba(255,178,74,.16),rgba(255,178,74,.035));box-shadow:0 0 24px rgba(255,178,74,.1)}
+  .tod-icon{width:19px;text-align:center;font-size:19px;line-height:1;color:rgba(217,212,198,.44);transition:.18s}
+  .tod-card.on .tod-icon{color:var(--amber);text-shadow:0 0 14px rgba(255,178,74,.6)}
+  .tod-copy b{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--bone);font-weight:400}
+  .tod-copy small{display:block;font-family:var(--mono);font-size:7px;letter-spacing:.08em;color:rgba(217,212,198,.38);margin-top:3px;text-transform:uppercase}
+  .tod-card.on .tod-copy small{color:rgba(255,203,132,.62)}
+  .menu-buttons{display:flex;flex-direction:column;gap:10px;width:min(360px,100%)}
+  .btn{position:relative;display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border:1px solid rgba(217,212,198,.2);background:linear-gradient(90deg,rgba(217,212,198,.035),rgba(217,212,198,.008));color:rgba(217,212,198,.72);font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;transition:.18s ease;text-align:left;clip-path:polygon(0 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%)}
+  .btn span{font-size:14px;opacity:.45;transition:.18s}
+  .btn:hover{border-color:var(--line-hot);background:linear-gradient(90deg,rgba(255,178,74,.16),rgba(255,178,74,.02));color:var(--bone);transform:translateX(4px)}
+  .btn:hover span{opacity:1;color:var(--amber)}
+  .btn.primary{background:linear-gradient(90deg,rgba(255,178,74,.94),rgba(222,126,35,.92));color:#160e06;border-color:transparent;font-weight:700;letter-spacing:.3em;box-shadow:0 0 38px rgba(255,178,74,.18)}
+  .btn.primary:hover{background:linear-gradient(90deg,#ffd18a,#ffb24a);box-shadow:0 0 55px rgba(255,178,74,.36)}
+  .menu-meta{margin-top:18px;font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:rgba(217,212,198,.32);text-transform:uppercase}
+  .menu-side{position:absolute;right:6vw;top:50%;transform:translateY(-48%);width:300px;z-index:3}
+  .side-panel{border:1px solid var(--line);background:linear-gradient(160deg,rgba(9,15,17,.78),rgba(5,8,9,.42));padding:22px;backdrop-filter:blur(6px);position:relative}
+  .side-panel::before{content:"";position:absolute;top:-1px;left:-1px;width:28px;height:2px;background:var(--amber)}
+  .side-label{font-family:var(--mono);font-size:9px;letter-spacing:.34em;color:var(--teal);margin-bottom:16px;text-transform:uppercase}
+  .side-title{font-size:21px;letter-spacing:.06em;margin:0 0 12px;color:var(--bone);text-transform:uppercase}
+  .side-copy{font-family:var(--mono);font-size:10px;line-height:1.9;color:var(--bone-dim);letter-spacing:.03em;margin:0 0 18px}
+  .side-stat{display:flex;justify-content:space-between;border-top:1px solid rgba(217,212,198,.1);padding:9px 0;font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--bone-dim);text-transform:uppercase}
+  .side-stat b{font-weight:400;color:var(--bone)}
+  .side-stat b.hot{color:var(--amber)}
+  .menu-footer{position:absolute;bottom:46px;left:54px;right:54px;display:flex;justify-content:space-between;z-index:3;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:rgba(217,212,198,.3);text-transform:uppercase}
+  .scanline{position:absolute;left:0;right:0;height:120px;z-index:2;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(105,211,202,.03),transparent);animation:scan 9s linear infinite}
+  @keyframes scan{0%{top:-15%}100%{top:115%}}
+
+  /* ---------------- HUD ---------------- */
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none;font-family:var(--mono)}
+  .hud-top{position:absolute;top:26px;left:0;right:0;display:flex;justify-content:center;align-items:flex-start;gap:40px}
+  .compass{width:min(460px,38vw);position:relative;height:38px;text-align:center}
+  .compass::before{content:"";position:absolute;left:0;right:0;top:13px;height:1px;background:linear-gradient(90deg,transparent,var(--line) 15%,var(--line) 85%,transparent)}
+  #compass-strip{position:absolute;inset:0;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent)}
+  #compass-inner{position:absolute;top:0;left:50%;height:100%;white-space:nowrap;will-change:transform}
+  .compass-tick{position:absolute;top:10px;width:1px;height:7px;background:rgba(217,212,198,.35)}
+  .compass-tick.major{height:11px;background:rgba(217,212,198,.72)}
+  .compass-az{position:absolute;top:24px;transform:translateX(-50%);font-size:8px;letter-spacing:.1em;color:rgba(217,212,198,.55)}
+  .compass-head{position:absolute;left:50%;top:8px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--amber);transform:translateX(-50%)}
+  .hud-wave{text-align:center;min-width:150px;padding-top:2px}
+  .hud-wave .eyebrow{font-size:8px;letter-spacing:.42em;color:var(--amber);text-transform:uppercase}
+  .hud-wave .val{font-family:var(--sans);font-size:29px;line-height:1.05;letter-spacing:.1em;color:var(--bone);font-weight:700;margin-top:3px;text-shadow:0 2px 18px rgba(0,0,0,.8)}
+  .hud-wave .sub{font-size:8px;letter-spacing:.25em;color:rgba(217,212,198,.5);margin-top:2px;text-transform:uppercase}
+  .hud-wave .sub b{color:var(--blood);font-weight:400}
+  .hud-objectives{position:absolute;top:26px;left:26px;width:238px;padding:13px 15px;border-left:2px solid var(--amber);background:linear-gradient(90deg,rgba(4,8,9,.66),transparent);font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+  .obj-head{font-size:8px;letter-spacing:.34em;color:var(--teal);margin-bottom:9px}
+  .obj-row{display:flex;align-items:center;justify-content:space-between;margin:7px 0;color:rgba(217,212,198,.64)}
+  .obj-row .bar{width:112px;height:3px;background:rgba(217,212,198,.14);margin-left:8px;position:relative}
+  .obj-row .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--teal);transition:width .2s;box-shadow:0 0 8px rgba(105,211,202,.35)}
+  .obj-row .bar i.warn{background:var(--amber)}
+  .obj-row .bar i.crit{background:var(--blood)}
+  .obj-row span:last-child{color:var(--bone);font-family:var(--mono)}
+  .hud-feed{position:absolute;top:100px;right:26px;width:240px;text-align:right;display:flex;flex-direction:column;gap:5px;font-size:9px;letter-spacing:.12em;color:rgba(217,212,198,.6);text-transform:uppercase}
+  .feed-row{opacity:0;transform:translateX(8px);transition:.2s;text-shadow:0 1px 3px #000}
+  .feed-row.on{opacity:1;transform:none}
+  .feed-row b{color:var(--amber);font-weight:400}
+  .hud-vitals{position:absolute;left:32px;bottom:30px;width:270px}
+  .vital-label{display:flex;justify-content:space-between;align-items:flex-end;font-size:8px;letter-spacing:.28em;color:rgba(217,212,198,.48);text-transform:uppercase;margin-bottom:7px}
+  .vital-label b{font-family:var(--sans);font-size:32px;line-height:.8;color:var(--bone);letter-spacing:.02em;font-weight:600}
+  .vital-label b.crit{color:var(--blood);animation:pulse 1s infinite}
+  .vital-bar{height:5px;background:rgba(217,212,198,.13);position:relative;overflow:hidden}
+  .vital-bar i{position:absolute;inset:0;transform-origin:left;background:linear-gradient(90deg,#7d2a20,#d05a43);transition:transform .2s ease;box-shadow:0 0 12px rgba(208,90,67,.5)}
+  .vital-bar.stam{height:2px;margin-top:6px}
+  .vital-bar.stam i{background:var(--teal);opacity:.65;box-shadow:none}
+  .vital-row{display:flex;align-items:center;gap:18px;margin-top:14px;font-size:9px;letter-spacing:.18em;color:rgba(217,212,198,.55);text-transform:uppercase}
+  .vital-row .icon{display:inline-flex;width:19px;height:15px;border:1px solid rgba(217,212,198,.35);align-items:center;justify-content:center;margin-right:7px;font-size:8px;color:var(--amber)}
+  .hud-ammo{position:absolute;right:32px;bottom:28px;text-align:right;min-width:250px}
+  .weapon-name{font-size:9px;letter-spacing:.34em;color:var(--amber);text-transform:uppercase;margin-bottom:2px}
+  .ammo-line{display:flex;align-items:baseline;justify-content:flex-end;gap:8px}
+  #ammo-mag{font-family:var(--sans);font-size:60px;line-height:.9;font-weight:600;letter-spacing:-.03em;color:var(--bone);text-shadow:0 2px 24px rgba(0,0,0,.8)}
+  #ammo-mag.low{color:var(--amber)}
+  #ammo-mag.empty{color:var(--blood);animation:pulse .9s infinite}
+  #ammo-reserve{font-family:var(--mono);font-size:17px;color:rgba(217,212,198,.48)}
+  .ammo-meta{display:flex;justify-content:flex-end;gap:14px;margin-top:7px;font-size:8px;letter-spacing:.2em;color:rgba(217,212,198,.42);text-transform:uppercase}
+  .ammo-pips{display:flex;justify-content:flex-end;gap:2px;margin-top:9px}
+  .ammo-pips i{width:3px;height:9px;background:rgba(217,212,198,.2);transform:skewX(-18deg)}
+  .ammo-pips i.on{background:var(--amber);box-shadow:0 0 5px rgba(255,178,74,.5)}
+  .hud-crosshair{position:absolute;left:50%;top:50%;width:30px;height:30px;transform:translate(-50%,-50%);transition:opacity .15s}
+  .ch-line{position:absolute;background:rgba(217,212,198,.78);box-shadow:0 0 3px rgba(0,0,0,.9)}
+  .ch-t,.ch-b{width:1px;height:7px;left:calc(50% - .5px)}
+  .ch-l,.ch-r{height:1px;width:7px;top:calc(50% - .5px)}
+  .ch-t{top:0}.ch-b{bottom:0}.ch-l{left:0}.ch-r{right:0}
+  .ch-dot{position:absolute;left:50%;top:50%;width:2px;height:2px;background:var(--amber);transform:translate(-50%,-50%);border-radius:50%;box-shadow:0 0 4px rgba(255,178,74,.7)}
+  #hitmarker{position:absolute;left:50%;top:50%;width:26px;height:26px;transform:translate(-50%,-50%) rotate(45deg);opacity:0;transition:opacity .08s}
+  #hitmarker::before,#hitmarker::after{content:"";position:absolute;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.8)}
+  #hitmarker::before{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%)}
+  #hitmarker::after{top:50%;left:0;right:0;height:1px;transform:translateY(-50%)}
+  #hitmarker.head::before,#hitmarker.head::after{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .hud-prompt{position:absolute;left:50%;bottom:23%;transform:translateX(-50%);text-align:center;opacity:0;transition:.15s}
+  .hud-prompt.on{opacity:1}
+  .hud-prompt .key{display:inline-flex;min-width:25px;height:25px;padding:0 6px;border:1px solid var(--amber);align-items:center;justify-content:center;color:var(--amber);font-size:11px;margin-right:9px;background:rgba(255,178,74,.08);box-shadow:0 0 16px rgba(255,178,74,.12);vertical-align:middle}
+  .hud-prompt .txt{font-size:10px;letter-spacing:.22em;color:var(--bone);text-transform:uppercase;text-shadow:0 2px 8px #000;vertical-align:middle}
+  .hud-prompt .sub{display:block;margin-top:7px;font-size:8px;letter-spacing:.18em;color:var(--bone-dim);text-transform:uppercase}
+  #objective-banner{position:absolute;left:50%;top:19%;transform:translate(-50%,-8px);text-align:center;opacity:0;transition:.4s;pointer-events:none}
+  #objective-banner.on{opacity:1;transform:translate(-50%,0)}
+  #objective-banner .b-kick{font-size:9px;letter-spacing:.5em;color:var(--amber);text-transform:uppercase;margin-bottom:8px}
+  #objective-banner .b-main{font-family:var(--sans);font-size:34px;letter-spacing:.22em;text-transform:uppercase;color:var(--bone);text-shadow:0 4px 30px #000;font-weight:600}
+  #objective-banner .b-sub{font-size:9px;letter-spacing:.24em;color:var(--bone-dim);text-transform:uppercase;margin-top:7px}
+  #radio{position:absolute;left:50%;bottom:11%;transform:translateX(-50%);width:min(620px,70vw);text-align:center;font-size:10px;letter-spacing:.1em;line-height:1.8;color:rgba(217,212,198,.82);text-shadow:0 2px 8px #000;opacity:0;transition:.3s}
+  #radio.on{opacity:1}
+  #radio .who{color:var(--teal);letter-spacing:.28em;font-size:8px;display:block;margin-bottom:4px;text-transform:uppercase}
+  .hud-warning{position:absolute;left:50%;top:66%;transform:translateX(-50%);font-size:9px;letter-spacing:.34em;color:var(--blood);text-transform:uppercase;opacity:0;text-shadow:0 0 15px rgba(179,53,37,.5);transition:opacity .25s}
+  .hud-warning.on{opacity:1;animation:pulse 1s infinite}
+  .dmg-ring{position:absolute;left:50%;top:50%;width:300px;height:300px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid transparent;opacity:0;pointer-events:none}
+  .dmg-ring.on{animation:dmgRing .8s ease-out}
+  @keyframes dmgRing{0%{opacity:.85;transform:translate(-50%,-50%) scale(.85);border-top-color:rgba(179,53,37,.9)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.08);border-top-color:rgba(179,53,37,0)}}
+  #wave-banner{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;opacity:0;transition:opacity .5s}
+  #wave-banner.on{opacity:1}
+  #wave-banner .wb-line{width:0;height:1px;background:linear-gradient(90deg,transparent,var(--amber),transparent);transition:width .6s ease}
+  #wave-banner.on .wb-line{width:min(540px,50vw)}
+  #wave-banner .wb-kick{font-size:10px;letter-spacing:.55em;color:var(--amber);margin:18px 0 10px;text-transform:uppercase}
+  #wave-banner .wb-title{font-family:var(--sans);font-weight:200;font-size:clamp(38px,5.8vw,86px);letter-spacing:.24em;color:var(--bone);text-transform:uppercase;text-shadow:0 6px 60px rgba(0,0,0,.9);margin:0;padding-left:.24em;text-align:center}
+  #wave-banner .wb-sub{font-size:9px;letter-spacing:.35em;color:var(--bone-dim);margin-top:12px;text-transform:uppercase}
+  .low-health{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(70,4,2,.38) 100%);transition:opacity .5s}
+  .low-health.on{opacity:1;animation:heartPulse 1.15s ease-in-out infinite}
+  @keyframes heartPulse{0%,100%{opacity:.5}12%{opacity:.95}22%{opacity:.55}}
+
+  /* ---------------- panels ---------------- */
+  .panel{position:relative;width:min(760px,88vw);max-height:84vh;overflow:auto;padding:38px 42px;background:linear-gradient(155deg,rgba(11,17,19,.96),rgba(4,7,8,.94));border:1px solid rgba(217,212,198,.16);box-shadow:0 40px 120px rgba(0,0,0,.72),0 0 80px rgba(105,211,202,.03);clip-path:polygon(0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%)}
+  .panel::before{content:"";position:absolute;top:0;left:0;width:120px;height:2px;background:var(--amber)}
+  .panel-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  .panel-kicker{font-size:9px;letter-spacing:.42em;color:var(--teal);text-transform:uppercase;margin-bottom:8px}
+  .panel h2{font-family:var(--sans);font-weight:300;font-size:43px;letter-spacing:.14em;margin:0;text-transform:uppercase;color:var(--bone)}
+  .panel h2 b{font-weight:700;color:var(--amber)}
+  .panel-close{background:none;border:1px solid var(--line);width:36px;height:36px;color:var(--bone-dim);font-family:var(--mono);font-size:16px;transition:.15s}
+  .panel-close:hover{color:var(--bone);border-color:var(--line-hot)}
+  .panel-sub{font-size:10px;letter-spacing:.18em;color:var(--bone-dim);line-height:1.8;text-transform:uppercase;margin:-6px 0 24px}
+  .panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 34px}
+  .control-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(217,212,198,.07);font-size:10px;letter-spacing:.12em;color:var(--bone-dim);text-transform:uppercase}
+  .control-row b{display:inline-flex;gap:5px}
+  kbd{min-width:24px;padding:4px 7px;border:1px solid rgba(217,212,198,.28);background:rgba(217,212,198,.05);color:var(--bone);font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-align:center;box-shadow:0 2px 0 rgba(0,0,0,.4)}
+  .setting-row{display:grid;grid-template-columns:1fr 220px 54px;gap:16px;align-items:center;padding:15px 0;border-bottom:1px solid rgba(217,212,198,.08)}
+  .setting-row label{font-size:10px;letter-spacing:.2em;color:var(--bone);text-transform:uppercase}
+  .setting-row small{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--bone-dim);margin-top:4px;text-transform:none}
+  .setting-row output{font-family:var(--mono);font-size:10px;color:var(--amber);text-align:right}
+  input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:rgba(217,212,198,.2);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border:1px solid var(--amber);background:#111;box-shadow:0 0 10px rgba(255,178,74,.5);cursor:pointer;transform:rotate(45deg)}
+  .seg{display:flex;gap:4px}
+  .seg button{flex:1;padding:7px 4px;border:1px solid rgba(217,212,198,.18);background:transparent;color:var(--bone-dim);font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;transition:.15s}
+  .seg button.on{border-color:var(--amber);color:var(--amber);background:rgba(255,178,74,.09)}
+  .panel-actions{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+  .panel-actions .btn{width:auto;flex:1;min-width:160px}
+  .panel .btn.primary{justify-content:center}
+
+  /* pause / result */
+  #pause .panel{width:min(560px,88vw)}
+  #pause .pause-nav{display:flex;flex-direction:column;gap:9px;margin-top:26px}
+  #gameover{background:radial-gradient(ellipse at 50% 40%,rgba(48,4,2,.55),rgba(3,4,5,.94) 65%)}
+  #gameover .panel,#victory .panel{width:min(620px,90vw);text-align:center}
+  #gameover .panel::before{background:var(--blood)}
+  .result-kicker{font-size:9px;letter-spacing:.55em;color:var(--blood);text-transform:uppercase;margin-bottom:14px}
+  #victory .result-kicker{color:var(--teal)}
+  .result-title{font-family:var(--sans);font-weight:200;font-size:clamp(45px,7vw,84px);letter-spacing:.16em;text-transform:uppercase;margin:0 0 8px;color:var(--bone);line-height:.95}
+  .result-title b{font-weight:800;color:var(--amber)}
+  .result-sub{font-size:9px;letter-spacing:.28em;color:var(--bone-dim);text-transform:uppercase;margin:16px 0 28px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(217,212,198,.12);border:1px solid rgba(217,212,198,.12);margin-bottom:28px}
+  .stat{background:rgba(6,9,10,.9);padding:16px 8px}
+  .stat b{display:block;font-family:var(--sans);font-size:28px;font-weight:500;color:var(--bone);letter-spacing:.02em}
+  .stat span{display:block;font-size:7px;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase;margin-top:5px}
+  .result-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .result-actions .btn{flex:0 1 220px;justify-content:center}
+
+  /* toasts / debug */
+  #toast{position:fixed;top:92px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:30;padding:9px 17px;border:1px solid var(--line-hot);background:rgba(5,9,10,.9);font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--amber);text-transform:uppercase;opacity:0;transition:.25s;pointer-events:none;clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%)}
+  #toast.on{opacity:1;transform:translateX(-50%)}
+  #perf{position:fixed;right:8px;bottom:6px;z-index:60;font-family:var(--mono);font-size:8px;color:rgba(217,212,198,.25);letter-spacing:.1em;pointer-events:none}
+  #orientation{position:fixed;inset:0;z-index:100;background:#040708;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;font-family:var(--mono);font-size:12px;letter-spacing:.25em;color:var(--bone-dim);line-height:2}
+  @media (max-height:800px){.menu-tagline{font-size:9px;margin-bottom:11px}.tod-picker{margin-bottom:12px}.menu-meta{margin-top:13px}.game-title{font-size:clamp(60px,9vw,132px)}.game-title .thin{margin-top:14px}.menu-buttons .btn{padding:12px 18px}.title-rule{margin:20px 0 14px}}
+  @media (max-width:900px){.menu-side{display:none}.menu-main{width:80vw;left:8vw}.hud-objectives{width:190px}.hud-vitals{width:210px}.hud-ammo{min-width:180px}#ammo-mag{font-size:46px}}
+  @media (max-aspect-ratio:1/1){#orientation{display:flex}.screen,.hud{display:none!important}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="grain"></div>
+<div class="vignette"></div>
+<div class="damage-wash" id="damage-wash"></div>
+<div class="flash-wash" id="flash-wash"></div>
+<div class="low-health" id="low-health"></div>
+
+<!-- ============ LOADING ============ -->
+<div class="screen" id="loading">
+  <div class="load-inner">
+    <div class="load-mark"></div>
+    <h1>DEADLIGHT</h1>
+    <div class="load-sub">OUTPOST 13 // SURVIVAL PROTOCOL</div>
+    <div class="load-track"><div id="load-fill"></div></div>
+    <div class="load-row"><span id="load-label">INITIALIZING RENDERER</span><span id="load-pct">0%</span></div>
+  </div>
+  <div id="load-tip">PROCEDURAL TERRAIN • REAL-TIME SHADOWS • DYNAMIC AUDIO</div>
+</div>
+
+<!-- ============ MAIN MENU ============ -->
+<div class="screen hidden" id="menu">
+  <div class="menu-frame"></div>
+  <div class="scanline"></div>
+  <div class="menu-top">
+    <div id="menu-clock">CLASSIFIED // SITE 13 // 03:47 LOCAL</div>
+    <div class="live" id="menu-live"><span class="dot"></span> SIGNAL LOST — HOSTILES ACTIVE</div>
+  </div>
+  <div class="menu-main">
+    <div class="menu-kicker">TACTICAL SURVIVAL HORROR</div>
+    <h1 class="game-title">DEADLIGHT<span class="thin">OUTPOST 13</span></h1>
+    <div class="title-rule"></div>
+    <p class="menu-tagline" id="menu-tagline">The outpost went dark at midnight.<br>Something came back with it.</p>
+    <div class="tod-picker" id="tod-picker" role="group" aria-label="Time of day">
+      <div class="tod-label">TIME OF DAY</div>
+      <div class="tod-options">
+        <button type="button" class="tod-card on" data-tod="night" aria-pressed="true">
+          <span class="tod-icon">☾</span>
+          <span class="tod-copy"><b>NIGHT</b><small>STORM / LOW VISIBILITY</small></span>
+        </button>
+        <button type="button" class="tod-card" data-tod="day" aria-pressed="false">
+          <span class="tod-icon">☀</span>
+          <span class="tod-copy"><b>DAY</b><small>OVERCAST / DRIZZLE</small></span>
+        </button>
+      </div>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn primary" id="btn-deploy">DEPLOY TO OUTPOST 13 <span>↵</span></button>
+      <button class="btn" id="btn-manual">FIELD MANUAL <span>03</span></button>
+      <button class="btn" id="btn-settings">SETTINGS <span>04</span></button>
+    </div>
+    <div class="menu-meta" id="menu-meta">ONE OUTPOST &nbsp;•&nbsp; EIGHT WAVES &nbsp;•&nbsp; HOLD UNTIL DAWN</div>
+  </div>
+  <div class="menu-side">
+    <div class="side-panel">
+      <div class="side-label">Mission Brief // 13-Δ</div>
+      <h3 class="side-title">Hold the line</h3>
+      <p class="side-copy" id="menu-side-copy">The evacuation convoy is gone. The radio mast is our only lifeline. Defend the beacon, barricade the gates, and survive eight waves until extraction. The forest does not stop.</p>
+      <div class="side-stat"><span>Location</span><b>Blackpine Valley</b></div>
+      <div class="side-stat"><span>Visibility</span><b id="menu-visibility">Low / Rain</b></div>
+      <div class="side-stat"><span>Threat</span><b class="hot">Severe</b></div>
+      <div class="side-stat"><span>Extraction</span><b>Wave 08</b></div>
+    </div>
+  </div>
+  <div class="menu-footer">
+    <span>BUILD 1.1.0 // PROCEDURAL ENGINE</span>
+    <span>MOUSE + KEYBOARD REQUIRED</span>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="hud-objectives">
+      <div class="obj-head">// BASE INTEGRITY</div>
+      <div class="obj-row"><span>BEACON</span><span class="bar"><i id="obj-gen"></i></span><span id="obj-gen-pct">100%</span></div>
+      <div class="obj-row"><span>N GATE</span><span class="bar"><i id="obj-north"></i></span><span id="obj-north-pct">100%</span></div>
+      <div class="obj-row"><span>S GATE</span><span class="bar"><i id="obj-south"></i></span><span id="obj-south-pct">100%</span></div>
+    </div>
+    <div class="compass">
+      <div id="compass-strip"><div id="compass-inner"></div></div>
+      <div class="compass-head"></div>
+    </div>
+    <div class="hud-wave">
+      <div class="eyebrow" id="phase-label">PREPARE</div>
+      <div class="val" id="wave-label">WAVE 01</div>
+      <div class="sub" id="wave-sub">NEXT WAVE <b>00:20</b></div>
+    </div>
+  </div>
+  <div class="hud-feed" id="kill-feed"></div>
+  <div class="hud-crosshair" id="crosshair"><div class="ch-line ch-t"></div><div class="ch-line ch-b"></div><div class="ch-line ch-l"></div><div class="ch-line ch-r"></div><div class="ch-dot"></div></div>
+  <div id="hitmarker"></div>
+  <div class="dmg-ring" id="dmg-ring"></div>
+  <div class="hud-vitals">
+    <div class="vital-label"><span>VITALS</span><b id="health-num">100</b></div>
+    <div class="vital-bar"><i id="health-bar"></i></div>
+    <div class="vital-bar stam"><i id="stamina-bar"></i></div>
+    <div class="vital-row">
+      <span><span class="icon">+</span><b id="medkits">02</b> MEDKITS</span>
+      <span><span class="icon">◆</span><b id="barricade-kits">03</b> BOARDS</span>
+    </div>
+  </div>
+  <div class="hud-ammo">
+    <div class="weapon-name" id="weapon-name">MK-18 ASSAULT RIFLE</div>
+    <div class="ammo-line"><span id="ammo-mag">30</span><span>/</span><span id="ammo-reserve">120</span></div>
+    <div class="ammo-meta"><span id="fire-mode">AUTO</span><span>5.56 MM</span><span id="weapon-slot">01</span></div>
+    <div class="ammo-pips" id="ammo-pips"></div>
+  </div>
+  <div class="hud-prompt" id="interact"><span class="key" id="interact-key">E</span><span class="txt" id="interact-text">PICK UP AMMUNITION</span><span class="sub" id="interact-sub"></span></div>
+  <div id="objective-banner"><div class="b-kick" id="banner-kick">SITUATION</div><div class="b-main" id="banner-main">HOLD THE LINE</div><div class="b-sub" id="banner-sub"></div></div>
+  <div id="radio"><span class="who">RADIO // COMMAND</span><span id="radio-text"></span></div>
+  <div class="hud-warning" id="hud-warning">BEACON UNDER ATTACK</div>
+</div>
+<div id="wave-banner"><div class="wb-line"></div><div class="wb-kick" id="wb-kick">INCOMING</div><h2 class="wb-title" id="wb-title">WAVE 01</h2><div class="wb-sub" id="wb-sub">THEY KNOW YOU'RE HERE</div></div>
+<div id="toast"></div>
+
+<!-- ============ FIELD MANUAL ============ -->
+<div class="screen hidden" id="manual">
+  <div class="panel">
+    <div class="panel-head"><div><div class="panel-kicker">SURVIVAL PACKET // PAGE 03</div><h2>FIELD <b>MANUAL</b></h2></div><button class="panel-close" data-close="manual">✕</button></div>
+    <p class="panel-sub">Read once. The dead do not give second lessons.</p>
+    <div class="panel-grid">
+      <div class="control-row"><span>Move</span><b><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></b></div>
+      <div class="control-row"><span>Look</span><b><kbd>MOUSE</kbd></b></div>
+      <div class="control-row"><span>Sprint</span><b><kbd>SHIFT</kbd></b></div>
+      <div class="control-row"><span>Crouch</span><b><kbd>C</kbd></b></div>
+      <div class="control-row"><span>Fire</span><b><kbd>LMB</kbd></b></div>
+      <div class="control-row"><span>Aim down sights</span><b><kbd>RMB</kbd></b></div>
+      <div class="control-row"><span>Reload</span><b><kbd>R</kbd></b></div>
+      <div class="control-row"><span>Flashlight</span><b><kbd>F</kbd></b></div>
+      <div class="control-row"><span>Interact / collect</span><b><kbd>E</kbd></b></div>
+      <div class="control-row"><span>Use medkit</span><b><kbd>H</kbd></b></div>
+      <div class="control-row"><span>Switch weapon</span><b><kbd>1</kbd><kbd>2</kbd><kbd>Q</kbd></b></div>
+      <div class="control-row"><span>Pause</span><b><kbd>ESC</kbd></b></div>
+    </div>
+    <div style="margin-top:28px;padding:18px 20px;border-left:2px solid var(--amber);background:rgba(255,178,74,.04);font-family:var(--mono);font-size:10px;line-height:2;color:var(--bone-dim);letter-spacing:.04em">
+      <b style="color:var(--amber)">SURVIVAL NOTES</b><br>
+      • Aim for the head. The dead feel nothing else for long.<br>
+      • Repair the gate barricades between waves — they will not hold forever.<br>
+      • The beacon is your lifeline. If it falls, you have nothing left to defend.<br>
+      • Sprinting drains stamina. Crouching steadies your aim and quiets your steps.<br>
+      • Scavenge crates between waves for ammunition, medkits, and boards.
+    </div>
+    <div class="panel-actions"><button class="btn primary" data-close="manual" style="justify-content:center">CLOSE MANUAL</button></div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div class="screen hidden" id="settings">
+  <div class="panel" style="width:min(680px,90vw)">
+    <div class="panel-head"><div><div class="panel-kicker">SYSTEM CONFIG // PAGE 04</div><h2>SETTINGS</h2></div><button class="panel-close" data-close="settings">✕</button></div>
+    <p class="panel-sub">Tune the signal. Adjustments apply immediately.</p>
+    <div class="setting-row"><div><label>Graphics quality</label><small>Lighting, shadows and post-processing</small></div>
+      <div class="seg" id="quality-seg"><button data-q="low">LOW</button><button data-q="medium">MED</button><button data-q="high" class="on">HIGH</button></div><output id="quality-out">HIGH</output></div>
+    <div class="setting-row"><div><label>Mouse sensitivity</label><small>Look speed while in combat</small></div>
+      <input type="range" id="sens" min="20" max="220" value="100"><output id="sens-out">1.00</output></div>
+    <div class="setting-row"><div><label>Master volume</label><small>Weapons, ambience and score</small></div>
+      <input type="range" id="volume" min="0" max="100" value="75"><output id="volume-out">75%</output></div>
+    <div class="setting-row"><div><label>Field of view</label><small>Weapon camera perspective</small></div>
+      <input type="range" id="fov" min="65" max="100" value="78"><output id="fov-out">78°</output></div>
+    <div class="setting-row"><div><label>Motion blur / shake</label><small>Camera response to impacts</small></div>
+      <div class="seg" id="shake-seg"><button data-shake="0">OFF</button><button data-shake="1" class="on">ON</button></div><output id="shake-out">ON</output></div>
+    <div class="panel-actions"><button class="btn primary" id="settings-done" style="justify-content:center">APPLY &amp; RETURN</button></div>
+  </div>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div class="screen hidden" id="pause">
+  <div class="panel">
+    <div class="panel-head"><div><div class="panel-kicker">TACTICAL PAUSE</div><h2>HOLD <b>POSITION</b></h2></div></div>
+    <p class="panel-sub">The dead are still out there. They are always out there.</p>
+    <div class="pause-nav">
+      <button class="btn primary" id="btn-resume">RESUME OPERATION <span>ESC</span></button>
+      <button class="btn" id="btn-pause-settings">SETTINGS <span>04</span></button>
+      <button class="btn" id="btn-restart">RESTART MISSION <span>↻</span></button>
+      <button class="btn" id="btn-abandon">ABANDON TO MAIN MENU <span>✕</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GAME OVER ============ -->
+<div class="screen hidden" id="gameover">
+  <div class="panel">
+    <div class="result-kicker">SIGNAL TERMINATED // KIA</div>
+    <h2 class="result-title">THE OUTPOST<br><b>FELL SILENT</b></h2>
+    <p class="result-sub">Your radio went quiet at wave <span id="death-wave">01</span>. The forest keeps what it takes.</p>
+    <div class="stats">
+      <div class="stat"><b id="death-kills">0</b><span>Kills</span></div>
+      <div class="stat"><b id="death-headshots">0</b><span>Headshots</span></div>
+      <div class="stat"><b id="death-time">00:00</b><span>Survived</span></div>
+      <div class="stat"><b id="death-accuracy">0%</b><span>Accuracy</span></div>
+    </div>
+    <div class="result-actions">
+      <button class="btn primary" id="btn-death-retry">REDEPLOY</button>
+      <button class="btn" id="btn-death-menu">MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VICTORY ============ -->
+<div class="screen hidden" id="victory">
+  <div class="panel">
+    <div class="result-kicker">EXTRACTION CONFIRMED // DAWN</div>
+    <h2 class="result-title">YOU HELD<br><b>THE LINE</b></h2>
+    <p class="result-sub">The beacon burned through the night. At 05:12, the birds went silent — then the rotors came.</p>
+    <div class="stats">
+      <div class="stat"><b id="win-kills">0</b><span>Kills</span></div>
+      <div class="stat"><b id="win-headshots">0</b><span>Headshots</span></div>
+      <div class="stat"><b id="win-time">00:00</b><span>Survived</span></div>
+      <div class="stat"><b id="win-accuracy">0%</b><span>Accuracy</span></div>
+    </div>
+    <div class="result-actions">
+      <button class="btn primary" id="btn-win-again">SURVIVE AGAIN</button>
+      <button class="btn" id="btn-win-menu">MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<div id="orientation">ROTATE DEVICE<br><span style="font-size:9px;opacity:.5">DESKTOP ENVIRONMENT RECOMMENDED</span></div>
+<div id="perf"></div>
+
+<!-- THREE.JS r160 UMD INLINE -->
+<script>/*__THREE__*/</script>
+<script>/*__CORE__*/</script>
+<script>/*__POST__*/</script>
+<script>/*__AUDIO__*/</script>
+<script>/*__WORLD__*/</script>
+<script>/*__FX__*/</script>
+<script>/*__ENEMIES__*/</script>
+<script>/*__WEAPONS__*/</script>
+<script>/*__PLAYER__*/</script>
+<script>/*__UI__*/</script>
+<script>/*__MAIN__*/</script>
+</body>
+</html>
